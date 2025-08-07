@@ -18,7 +18,7 @@ const router = express.Router();
 router.get('/', handleCreateTask);
 router.post('/', handleCreateTask);
   
- function handleCreateTask(req, res){
+async function handleCreateTask(req, res){
     try {
         const { WXCC_Username, Destination } = req.query;
         
@@ -34,7 +34,7 @@ router.post('/', handleCreateTask);
         //
         // Create a new Task Id in Webex Contact Center
         //
-        let taskId = createWxCCTask(WXCC_TASK_ENTRYPOINT_ID, Destination, WXCC_TASK_DIRECTION, {}, WXCC_MEDIA_TYPE, WXCC_TASK_OUTBOUND_TYPE); 
+        let taskId = await createWxCCTask(WXCC_TASK_ENTRYPOINT_ID, Destination, WXCC_TASK_DIRECTION, {}, WXCC_MEDIA_TYPE, WXCC_TASK_OUTBOUND_TYPE); 
         console.log("  task ID: " + taskId);
 
         if (taskId) {
