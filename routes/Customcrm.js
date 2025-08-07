@@ -1,5 +1,6 @@
 const express = require('express');
 const axios = require('axios');
+const { route } = require('express/lib/application');
 require('dotenv').config({ path: '.env' });
 
 const WXCC_TASK_ENTRYPOINT_ID = process.env.WXCC_TASK_ENTRYPOINT_ID;
@@ -14,7 +15,10 @@ const router = express.Router();
 //
 // GET /customcrm for CustomCRM integration
 //
-router.get('/', async function(req, res){
+router.get('/', handleCreateTask);
+router.post('/', handleCreateTask);
+  
+ function handleCreateTask(req, res){
     try {
         const { WXCC_Username, Destination } = req.query;
         
@@ -30,7 +34,7 @@ router.get('/', async function(req, res){
         //
         // Create a new Task Id in Webex Contact Center
         //
-        let taskId = await createWxCCTask(WXCC_TASK_ENTRYPOINT_ID, Destination, WXCC_TASK_DIRECTION, {}, WXCC_MEDIA_TYPE, WXCC_TASK_OUTBOUND_TYPE); 
+        let taskId = createWxCCTask(WXCC_TASK_ENTRYPOINT_ID, Destination, WXCC_TASK_DIRECTION, {}, WXCC_MEDIA_TYPE, WXCC_TASK_OUTBOUND_TYPE); 
         console.log("  task ID: " + taskId);
 
         if (taskId) {
@@ -45,7 +49,7 @@ router.get('/', async function(req, res){
         res.status(500).json({ error: "Internal Server Error", details: error.message });
     }
     
-});
+};
 
 //
 // Get Hubspots Contact Id by phone
