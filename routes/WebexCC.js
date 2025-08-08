@@ -1,0 +1,186 @@
+const express = require('express');
+const axios = require('axios');
+const storage = require('node-persist');
+const url = require('url');
+const qs = require('qs');
+const { route } = require('express/lib/application');
+require('dotenv').config({ path: '.env' });
+
+const WXCC_API_URL = process.env.WXCC_API_URL;
+const WXCC_AUTH_URL = process.env.WXCC_AUTH_URL;
+const WXCC_API_CLIENT_ID = process.env.WXCC_API_CLIENT_ID;
+const WXCC_API_CLIENT_SECRET = process.env.WXCC_API_CLIENT_SECRET;
+const WXCC_API_REDIRECT_URI = process.env.WXCC_API_REDIRECT_URI;
+const WXCC_API_SCOPES = process.env.WXCC_API_SCOPES;
+const WXCC_API_ORG_ID = process.env.WXCC_API_ORG_ID;
+
+const router = express.Router();
+storage.init();
+
+//
+// GET /webexcc for Webex Contact Center Integration
+//
+router.get('/auth/login', async function(req, res){
+    try{
+        //
+        // Main Login Endpoint that triggers the OAuth2 Flow.
+        // Step 1 - Redirect to Webex to fetch Authorization Code
+        // Step 2 - Redirect to Callback / Redirect URI to retrieve the code
+        // Step 3 - POST to Webex for an Access Token
+        //
+        
+        console.log(`Redirecting to Webex Login Page, using Client ID: ${WXCC_API_CLIENT_ID}`);
+        res.redirect(
+                url.format({
+                pathname: WXCC_AUTH_URL,
+                query: {
+                    response_type: 'code',
+                    client_id: WXCC_API_CLIENT_ID,
+                    redirect_uri: WXCC_API_REDIRECT_URI,
+                    scope: WXCC_API_SCOPES,
+                    state: 'AudioConnector',
+                },
+            })
+        );
+
+    }
+    catch (error) {
+        console.error("Error processing request:", error);
+        res.status(500).json({ error: "Internal Server Error", details: error.message });
+    }
+});
+
+//
+// Callback endpoint to handle the OAuth2 flow
+//
+router.get('/auth/callback', async (req, res) => {
+    try{
+        //
+        // Redirect Endpoint to Fetch Code and POST to Webex, i.e
+        // Step 2 - Redirect to Callback / Redirect URI to retrieve the code
+        // Step 3 - POST to Webex for an Access Token
+        //
+        const code = req.query.code ? req.query.code : null;
+        const error = req.query.error
+            ? `${req.query.error} ${req.query.error_description}`
+            : null;
+    
+        if (!code) {
+            console.error(`Error occured during the OAuth flow: missing CODE parameter`);
+
+            console.error(`ERROR: ${error}`);
+            res.status(500);
+            res.send({ error: 'An error occured while fetching the code' });
+        }
+
+        console.log(`Fetched Code: ${code}`);
+
+        //
+        // Get access Token - submit required payload
+        //
+        let data = qs.stringify({
+            'grant_type': 'authorization_code',
+            'client_id': WXCC_API_CLIENT_ID,
+            'client_secret': WXCC_API_CLIENT_SECRET,
+            'redirect_uri': WXCC_API_REDIRECT_URI,
+            'code': code 
+        });
+
+        let config = {
+            method: 'post',
+            maxBodyLength: Infinity,
+            url: 'https://webexapis.com/v1/access_token',
+            headers: { 
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            data : data
+        };
+
+        //
+        // Request the Access Token
+        //
+        let response = await axios.request(config)
+        if (response.data)
+        {
+            await storage.setItem('loginDetails', response.data
+                ? response.data
+                : { error: 'Error while fetching access token' });
+
+            //
+            // You can fetch the Access Token, Cluster ID, Org ID from here
+            //
+            const loginDetails = await storage.getItem('loginDetails');
+            console.log(`   Access Token: ${loginDetails.access_token}`);
+            console.log(`   Refresh Token: ${loginDetails.refresh_token}`);
+        }
+        else {
+            return null
+        }
+             
+        //
+        // Show a simple HTML page with the Access Token
+        //
+        res.sendFile('index.html', { root: __dirname + '/../public' });
+    }
+    catch (error) {
+        console.error("Error processing request:", error);
+        res.status(500).json({ error: "Internal Server Error", details: error.message });
+    }
+});
+
+//
+// Create Webex Contact Center Task
+//
+async function createWxCCTask(entryPointId, destination, direction, attributes, mediaType, outboundType){
+    try{
+
+        //
+        // Load the access token from storage
+        //
+        const loginDetails = await storage.getItem('loginDetails');
+        let accessToken = loginDetails.access_token;
+
+        //
+        // Create the data to search
+        //
+        let data = JSON.stringify({
+            "entryPointId": entryPointId,
+            "destination": destination,
+            "direction": direction,
+            "attributes": attributes || {},
+            "mediaType": mediaType,
+            "outboundType": outboundType 
+        });
+
+        
+        //
+        // Create the request config
+        //
+        let config = {
+            method: 'post',
+            maxBodyLength: Infinity,
+            url: WXCC_API_URL + '/v1/tasks',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + accessToken
+            },
+            data: data
+        };
+
+        //
+        // Make the request
+        //
+        let response = await axios.request(config);
+        if (response.data.data.id)
+            return response.data.data.id;
+        else
+            return null;
+
+    } catch (error) {
+        console.error("Error fetching contact ID:", error);
+        return null;
+    }
+    
+}
+
+module.exports = { router, storage, createWxCCTask };

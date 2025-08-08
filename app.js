@@ -12,6 +12,7 @@ require('dotenv').config({ path: '.env' });
 // Map the routes
 //
 const customcrmRoute = require('./routes/Customcrm');
+const { router: webexCCRouter } = require('./routes/WebexCC');
 
 //
 // Encoding bodies support
@@ -19,6 +20,7 @@ const customcrmRoute = require('./routes/Customcrm');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/customcrm', customcrmRoute);
+app.use('/webexcc', webexCCRouter);
 
 
 //
