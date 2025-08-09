@@ -32,7 +32,6 @@ async function handleCreateTask(req, res){
         //
         // Check if the user is logged in
         //
-        await storage.clear();
         const loginDetails = await storage.getItem('loginDetails');
         if (loginDetails) {
             //
