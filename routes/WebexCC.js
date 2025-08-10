@@ -102,14 +102,15 @@ router.get('/auth/callback', async (req, res) => {
         let response = await axios.request(config)
         if (response.data)
         {
-            await storage.setItem('loginDetails', response.data
+            const WxCCUser = await storage.getItem('WxCCUser');
+            await storage.setItem(`loginDetails_${WxCCUser}`, response.data
                 ? response.data
                 : { error: 'Error while fetching access token' });
 
             //
             // You can fetch the Access Token, Cluster ID, Org ID from here
             //
-            const loginDetails = await storage.getItem('loginDetails');
+            const loginDetails = await storage.getItem(`loginDetails_${WxCCUser}`);
             console.log(`   Access Token: ${loginDetails.access_token}`);
             console.log(`   Refresh Token: ${loginDetails.refresh_token}`);
         }
@@ -129,6 +130,23 @@ router.get('/auth/callback', async (req, res) => {
 });
 
 //
+// Clear the storage persist
+//
+router.get('/auth/reset', async (req, res) => {
+    try{
+        //
+        // Clear the storage persist
+        //
+        await storage.clear();
+        res.send({ message: 'Storage cleared. Please login again.', link: '/login' });
+    }
+    catch (error) {
+        console.error("Error processing request:", error);
+        res.status(500).json({ error: "Internal Server Error", details: error.message });
+    }
+});
+
+//
 // Create Webex Contact Center Task
 //
 async function createWxCCTask(entryPointId, destination, direction, attributes, mediaType, outboundType){
@@ -137,7 +155,8 @@ async function createWxCCTask(entryPointId, destination, direction, attributes, 
         //
         // Load the access token from storage
         //
-        const loginDetails = await storage.getItem('loginDetails');
+        const WxCCUser = await storage.getItem('WxCCUser');
+        const loginDetails = await storage.getItem(`loginDetails_${WxCCUser}`);
         let accessToken = loginDetails.access_token;
 
         //
