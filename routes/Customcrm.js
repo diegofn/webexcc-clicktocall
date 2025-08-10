@@ -19,20 +19,22 @@ router.post('/', handleCreateTask);
   
 async function handleCreateTask(req, res){
     try {
-        const { Destination } = req.query;
+        const { WxCCUser, Destination } = req.query;
         
-        if (!Destination) {
-            console.error("Missing required query parameters: Destination");
-            return res.status(400).json({ error: 'Missing Destination parameter.' });
+        if (!WxCCUser || !Destination) {
+            console.error("Missing required query parameters: WxCCUser and Destination");
+            return res.status(400).json({ error: 'Missing WxCCUser or Destination parameter.' });
         }   
          
         console.log ("Receive Task Outbound Request");
+        console.log (`  User: ${WxCCUser}`);
         console.log (`  Destination: ${Destination}`);
 
         //
         // Check if the user is logged in
         //
-        const loginDetails = await storage.getItem('loginDetails');
+        await storage.setItem('WxCCUser', WxCCUser);
+        const loginDetails = await storage.getItem(`loginDetails_${WxCCUser}`);
         if (loginDetails) {
             //
             // Create a new Task Id in Webex Contact Center

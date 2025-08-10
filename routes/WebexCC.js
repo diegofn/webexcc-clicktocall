@@ -60,17 +60,9 @@ router.get('/auth/callback', async (req, res) => {
         // Step 2 - Redirect to Callback / Redirect URI to retrieve the code
         // Step 3 - POST to Webex for an Access Token
         //
-        const code = req.query.code ? req.query.code : null;
-        const error = req.query.error
-            ? `${req.query.error} ${req.query.error_description}`
-            : null;
-    
+        const code = req.query.code;
         if (!code) {
-            console.error(`Error occured during the OAuth flow: missing CODE parameter`);
-
-            console.error(`ERROR: ${error}`);
-            res.status(500);
-            res.send({ error: 'An error occured while fetching the code' });
+            return res.status(400).json({ error: 'Missing code parameter' });
         }
 
         console.log(`Fetched Code: ${code}`);
@@ -90,37 +82,45 @@ router.get('/auth/callback', async (req, res) => {
             method: 'post',
             maxBodyLength: Infinity,
             url: 'https://webexapis.com/v1/access_token',
-            headers: { 
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             data : data
         };
 
         //
         // Request the Access Token
         //
-        let response = await axios.request(config)
-        if (response.data)
-        {
-            await storage.setItem('loginDetails', response.data
-                ? response.data
-                : { error: 'Error while fetching access token' });
+        const response = await axios.request(config);
+        const WxCCUser = await storage.getItem('WxCCUser');
+        await storage.setItem(`loginDetails_${WxCCUser}`, response.data);
 
-            //
-            // You can fetch the Access Token, Cluster ID, Org ID from here
-            //
-            const loginDetails = await storage.getItem('loginDetails');
-            console.log(`   Access Token: ${loginDetails.access_token}`);
-            console.log(`   Refresh Token: ${loginDetails.refresh_token}`);
-        }
-        else {
-            return null
-        }
+        //
+        // You can fetch the Access Token, Cluster ID, Org ID from here
+        //
+        const loginDetails = await storage.getItem(`loginDetails_${WxCCUser}`);
+        console.log(`   Access Token: ${loginDetails.access_token}`);
+        console.log(`   Refresh Token: ${loginDetails.refresh_token}`);
              
         //
         // Show a simple HTML page with the Access Token
         //
         res.sendFile('index.html', { root: __dirname + '/../public' });
+    }
+    catch (error) {
+        console.error("Error processing request:", error);
+        res.status(500).json({ error: "Internal Server Error", details: error.message });
+    }
+});
+
+//
+// Clear the storage persist
+//
+router.get('/auth/reset', async (req, res) => {
+    try{
+        //
+        // Clear the storage persist
+        //
+        await storage.clear();
+        res.send({ message: 'Storage cleared. Please login again.', link: '/login' });
     }
     catch (error) {
         console.error("Error processing request:", error);
@@ -137,7 +137,8 @@ async function createWxCCTask(entryPointId, destination, direction, attributes, 
         //
         // Load the access token from storage
         //
-        const loginDetails = await storage.getItem('loginDetails');
+        const WxCCUser = await storage.getItem('WxCCUser');
+        const loginDetails = await storage.getItem(`loginDetails_${WxCCUser}`);
         let accessToken = loginDetails.access_token;
 
         //
