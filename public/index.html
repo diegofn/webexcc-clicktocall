@@ -28,5 +28,13 @@
     <div class="aviso-verde">
         ¡Estás registrado correctamente!
     </div>
+
+    <script>
+    fetch('/webexcc/auth/token')
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById('token').textContent = data.access_token || 'No token found';
+      });
+  </script>
 </body>
 </html>
