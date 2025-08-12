@@ -89,23 +89,15 @@ router.get('/auth/callback', async (req, res) => {
         //
         // Request the Access Token
         //
-        let response = await axios.request(config)
-        if (response.data)
-        {
-            await storage.setItem('loginDetails', response.data
-                ? response.data
-                : { error: 'Error while fetching access token' });
+        let response = await axios.request(config);
+        await storage.setItem('loginDetails', response.data);
 
-            //
-            // You can fetch the Access Token, Cluster ID, Org ID from here
-            //
-            const loginDetails = await storage.getItem('loginDetails');
-            console.log(`   Access Token: ${loginDetails.access_token}`);
-            console.log(`   Refresh Token: ${loginDetails.refresh_token}`);
-        }
-        else {
-            return null
-        }
+        //
+        // You can fetch the Access Token, Cluster ID, Org ID from here
+        //
+        const loginDetails = await storage.getItem('loginDetails');
+        console.log(`   Access Token: ${loginDetails.access_token}`);
+        console.log(`   Refresh Token: ${loginDetails.refresh_token}`);
              
         //
         // Show a simple HTML page with the Access Token
