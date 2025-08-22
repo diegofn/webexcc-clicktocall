@@ -90,14 +90,23 @@ router.get('/auth/callback', async (req, res) => {
         // Request the Access Token
         //
         let response = await axios.request(config);
-        await storage.setItem('loginDetails', response.data);
+        const WxCCUser = await storage.getItem('WxCCUser');
 
-        //
-        // You can fetch the Access Token, Cluster ID, Org ID from here
-        //
-        const loginDetails = await storage.getItem('loginDetails');
-        console.log(`   Access Token: ${loginDetails.access_token}`);
-        console.log(`   Refresh Token: ${loginDetails.refresh_token}`);
+        if (response.data) {
+            await storage.setItem(`loginDetails_${WxCCUser}`, response.data);
+
+            //
+            // You can fetch the Access Token, Cluster ID, Org ID from here
+            //
+            const loginDetails = await storage.getItem(`loginDetails_${WxCCUser}`);
+            console.log(`   Access Token: ${loginDetails.access_token}`);
+            console.log(`   Refresh Token: ${loginDetails.refresh_token}`);
+        }
+        else {
+            return res.status(500).json({ error: 'Failed to retrieve access token' });
+        }
+
+        
              
         //
         // Show a simple HTML page with the Access Token
