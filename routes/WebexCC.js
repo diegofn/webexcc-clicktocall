@@ -137,6 +137,72 @@ router.get('/auth/reset', async (req, res) => {
 });
 
 //
+// Renewal the access token
+//
+router.get('/auth/renew', async (req, res) => {
+    //
+    // Convert time in (seconds) in days, hour and minutes
+    //
+    function formatExpiresIn(timeInSeconds) {
+        const days = Math.floor(timeInSeconds / (3600 * 24));
+        const hours = Math.floor((timeInSeconds % (3600 * 24)) / 3600);
+        const minutes = Math.floor((timeInSeconds % 3600) / 60);
+        return `${days}d ${hours}h ${minutes}m`;
+    }
+
+    try{
+        //
+        // Load the access token from storage
+        //
+        const allLoginDetails = await storage.keys();
+
+        for (const key of allLoginDetails) {
+            if (key.startsWith('loginDetails_')) {
+                const loginDetails = await storage.getItem(key);
+                console.log(`Fetched Details for: ${key}`);
+                console.log(`      Access token: ${loginDetails.access_token}`);
+                console.log(`      Refresh token: ${loginDetails.refresh_token}`);
+                console.log('      Expires on: ' + formatExpiresIn(loginDetails.expires_in));
+
+                //
+                // Get new access Token - submit required payload
+                //
+                let data = qs.stringify({
+                    'grant_type': 'refresh_token',
+                    'client_id': WXCC_API_CLIENT_ID,
+                    'client_secret': WXCC_API_CLIENT_SECRET,
+                    'redirect_uri': WXCC_API_REDIRECT_URI,
+                    "refresh_token": loginDetails.refresh_token
+                });
+
+                let config = {
+                    method: 'post',
+                    maxBodyLength: Infinity,
+                    url: 'https://webexapis.com/v1/access_token',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    data : data
+                };
+                
+                //
+                // Make the request
+                //
+                let response = await axios.request(config);
+                if (response.data)
+                    await storage.setItem(`${key}`, response.data);
+                else
+                    console.error("Failed to renew access token for " + key);
+            }
+        }
+
+        res.send({ message: 'Access token renewed', link: '/login' });
+    }
+    catch (error) {
+        console.error("Error processing request:", error);
+        res.status(500).json({ error: "Internal Server Error", details: error.message });
+    }
+});
+
+//
 // Create Webex Contact Center Task
 //
 async function createWxCCTask(entryPointId, destination, direction, attributes, mediaType, outboundType){
