@@ -160,9 +160,9 @@ router.get('/auth/renew', async (req, res) => {
             if (key.startsWith('loginDetails_')) {
                 const loginDetails = await storage.getItem(key);
                 console.log(`Fetched Details for: ${key}`);
-                console.log(`      Access token: ${loginDetails.access_token}`);
-                console.log(`      Refresh token: ${loginDetails.refresh_token}`);
-                console.log('      Expires on: ' + formatExpiresIn(loginDetails.expires_in));
+                console.log(`    Access token: ${loginDetails.access_token}`);
+                console.log(`    Refresh token: ${loginDetails.refresh_token}`);
+                console.log('    Expires on: ' + formatExpiresIn(loginDetails.expires_in));
 
                 //
                 // Get new access Token - submit required payload
