@@ -2,7 +2,7 @@ const express = require('express');
 const axios = require('axios');
 const { route } = require('express/lib/application');
 require('dotenv').config({ path: '.env' });
-const { storage, createWxCCTask } = require('./WebexCC');
+const { storage, createWxCCTask, getWebexPeopleDetails } = require('./WebexCC');
 
 const WXCC_TASK_ENTRYPOINT_ID = process.env.WXCC_TASK_ENTRYPOINT_ID;
 const WXCC_TASK_DIRECTION = process.env.WXCC_TASK_DIRECTION;
@@ -57,5 +57,44 @@ async function handleCreateTask(req, res){
     }
     
 };
+
+//
+// Return all Webex User sign-ins on the App and their data. 
+//
+router.get('/GetAllWebexUsers', async function (req, res){
+    try{
+        //
+        // Get entire storage
+        //
+        const allLoginDetails = await storage.keys();
+        let users = [];
+
+        for (let key of allLoginDetails) {
+            if (key.startsWith('loginDetails_')) {
+                const loginDetails = await storage.getItem(key);
+                let user = key.replace('loginDetails_', '');
+                let webexUser = await getWebexPeopleDetails(loginDetails.access_token);
+
+                if (webexUser.id) {
+                    console.log(`Fetched Details for: ${key}`);
+                    console.log(`    DisplayName: ${webexUser.displayName}`);
+                    console.log(`    Access token: ${loginDetails.access_token}`);
+                    console.log(`    Expires at:  ${loginDetails.expires_at}`);
+                    console.log(`    Email: ${webexUser.emails[0]}`);
+                    console.log(`    PhoneNumbers: ${webexUser.phoneNumbers[0].value}`);
+                    
+                    users.push({ crmUser: user, webexUser: webexUser.displayName, email: webexUser.emails[0], extension: webexUser.phoneNumbers[0].value, expires_at: loginDetails.expires_at });
+                }
+
+            }
+        }
+
+        res.json(users);
+    }
+    catch (error) {
+        console.error("Error processing request:", error);
+        res.status(500).json({ error: "Internal Server Error", details: error.message });
+    }
+});
 
 module.exports = router;

@@ -93,10 +93,14 @@ router.get('/auth/callback', async (req, res) => {
         const WxCCUser = await storage.getItem('WxCCUser');
 
         if (response.data) {
+            //
+            // Add the expiration time
+            //
+            response.data.expires_at = Date.now() + (response.data.expires_in * 1000);
             await storage.setItem(`loginDetails_${WxCCUser}`, response.data);
 
             //
-            // You can fetch the Access Token, Cluster ID, Org ID from here
+            // You can fetch the Access Token from here
             //
             const loginDetails = await storage.getItem(`loginDetails_${WxCCUser}`);
             console.log(`   Access Token: ${loginDetails.access_token}`);
@@ -105,8 +109,6 @@ router.get('/auth/callback', async (req, res) => {
         else {
             return res.status(500).json({ error: 'Failed to retrieve access token' });
         }
-
-        
              
         //
         // Show a simple HTML page with the Access Token
@@ -140,16 +142,6 @@ router.get('/auth/reset', async (req, res) => {
 // Renewal the access token
 //
 router.get('/auth/renew', async (req, res) => {
-    //
-    // Convert time in (seconds) in days, hour and minutes
-    //
-    function formatExpiresIn(timeInSeconds) {
-        const days = Math.floor(timeInSeconds / (3600 * 24));
-        const hours = Math.floor((timeInSeconds % (3600 * 24)) / 3600);
-        const minutes = Math.floor((timeInSeconds % 3600) / 60);
-        return `${days}d ${hours}h ${minutes}m`;
-    }
-
     try{
         //
         // Load the access token from storage
@@ -187,10 +179,16 @@ router.get('/auth/renew', async (req, res) => {
                 // Make the request
                 //
                 let response = await axios.request(config);
-                if (response.data)
+                if (response.data) {
+                    //
+                    // Add the expiration time
+                    //
+                    response.data.expires_at = Date.now() + (response.data.expires_in * 1000);
                     await storage.setItem(`${key}`, response.data);
-                else
+                }
+                else {
                     console.error("Failed to renew access token for " + key);
+                }
             }
         }
 
@@ -258,4 +256,38 @@ async function createWxCCTask(entryPointId, destination, direction, attributes, 
     
 }
 
-module.exports = { router, storage, createWxCCTask };
+//
+// Get Webex People Details
+//
+async function getWebexPeopleDetails(access_token){
+    try{
+        //
+        // Create the request config
+        //
+        let config = {
+            method: 'get',
+            maxBodyLength: Infinity,
+            url: 'https://webexapis.com/v1/people/me',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + access_token
+            }
+        };
+
+        //
+        // Make the request
+        //
+        let response = await axios.request(config);
+        if (response.data.id)
+            return response.data;
+        else
+            return null;
+
+    } catch (error) {
+        console.error("Error fetching people details", error);
+        return null;
+    }
+    
+}
+
+module.exports = { router, storage, createWxCCTask, getWebexPeopleDetails };

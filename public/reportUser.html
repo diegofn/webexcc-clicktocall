@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de usuarios activos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .aviso-verde {
+            background-color: #4caf50;
+            color: #fff;
+            padding: 20px;
+            margin: 40px auto 20px auto;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 1.2em;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .tabla-tokens {
+            margin: 0 auto;
+            width: 90%;
+            max-width: 700px;
+            border-collapse: collapse;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .tabla-tokens th, .tabla-tokens td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e0e0e0;
+            text-align: left;
+        }
+        .tabla-tokens th {
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        .tabla-tokens tr:last-child td {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="aviso-verde">
+        Registro de usuarios de Webex Contact Center registrados en el Webservice
+    </div>
+
+    <table class="tabla-tokens">
+        <thead>
+            <tr>
+                <th>CRM User</th>
+                <th>Webex User</th>
+                <th>Email</th>
+                <th>Extension</th>
+                <th>Token expiration date</th>
+            </tr>
+        </thead>
+        <tbody id="tokens-body">
+            <!-- Las filas se llenarán dinámicamente -->
+        </tbody>
+    </table>
+
+    <script>
+    function formatTimestamp(timestamp) {
+        const date = new Date(timestamp);
+        const dia = date.getDate().toString().padStart(2, '0');
+        const mes = (date.getMonth() + 1).toString().padStart(2, '0'); // Los meses empiezan en 0
+        const año = date.getFullYear();
+        const hora = date.getHours().toString().padStart(2, '0');
+        const minuto = date.getMinutes().toString().padStart(2, '0');
+        return `${dia}/${mes}/${año} ${hora}:${minuto}`;
+    }
+
+    fetch('/customcrm/GetAllWebexUsers')
+      .then(res => res.json())
+      .then(data => {
+        const tbody = document.getElementById('tokens-body');
+        tbody.innerHTML = '';
+        data.forEach(item => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${item.crmUser || ''}</td>
+            <td>${item.webexUser || ''}</td>
+            <td>${item.email || ''}</td>
+            <td>${item.extension || ''}</td>
+            <td>${formatTimestamp(item.expires_at)}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+      })
+      .catch(() => {
+        document.getElementById('tokens-body').innerHTML =
+          '<tr><td colspan="3">No se pudo cargar la información.</td></tr>';
+      });
+    </script>
+</body>
+</html>
