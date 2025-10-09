@@ -81,9 +81,8 @@ router.get('/GetAllWebexUsers', async function (req, res){
                     console.log(`    Access token: ${loginDetails.access_token}`);
                     console.log(`    Expires at:  ${loginDetails.expires_at}`);
                     console.log(`    Email: ${webexUser.emails[0]}`);
-                    console.log(`    PhoneNumbers: ${webexUser.phoneNumbers[0].value}`);
                     
-                    users.push({ crmUser: user, webexUser: webexUser.displayName, email: webexUser.emails[0], extension: webexUser.phoneNumbers[0].value, expires_at: loginDetails.expires_at });
+                    users.push({ crmUser: user, webexUser: webexUser.displayName, email: webexUser.emails[0], extension: '', expires_at: loginDetails.expires_at });
                 }
 
             }
