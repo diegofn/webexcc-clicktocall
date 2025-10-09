@@ -6,8 +6,8 @@ const qs = require('qs');
 const { route } = require('express/lib/application');
 require('dotenv').config({ path: '.env' });
 
+const WXC_API_URL = process.env.WXC_API_URL;
 const WXCC_API_URL = process.env.WXCC_API_URL;
-const WXCC_AUTH_URL = process.env.WXCC_AUTH_URL;
 const WXCC_API_CLIENT_ID = process.env.WXCC_API_CLIENT_ID;
 const WXCC_API_CLIENT_SECRET = process.env.WXCC_API_CLIENT_SECRET;
 const WXCC_API_REDIRECT_URI = process.env.WXCC_API_REDIRECT_URI;
@@ -32,7 +32,7 @@ router.get('/auth/login', async function(req, res){
         console.log(`Redirecting to Webex Login Page, using Client ID: ${WXCC_API_CLIENT_ID}`);
         res.redirect(
                 url.format({
-                pathname: WXCC_AUTH_URL,
+                pathname: WXC_API_URL + '/v1/authorize',
                 query: {
                     response_type: 'code',
                     client_id: WXCC_API_CLIENT_ID,
@@ -81,7 +81,7 @@ router.get('/auth/callback', async (req, res) => {
         let config = {
             method: 'post',
             maxBodyLength: Infinity,
-            url: 'https://webexapis.com/v1/access_token',
+            url: WXC_API_URL + '/v1/access_token',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             data : data
         };
@@ -170,7 +170,7 @@ router.get('/auth/renew', async (req, res) => {
                 let config = {
                     method: 'post',
                     maxBodyLength: Infinity,
-                    url: 'https://webexapis.com/v1/access_token',
+                    url: WXC_API_URL + '/v1/access_token',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     data : data
                 };
@@ -267,7 +267,7 @@ async function getWebexPeopleDetails(access_token){
         let config = {
             method: 'get',
             maxBodyLength: Infinity,
-            url: 'https://webexapis.com/v1/people/me',
+            url: WXC_API_URL + '/v1/people/me',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + access_token
